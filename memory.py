@@ -9,7 +9,6 @@ def get_connection():
 def init_db():
     with get_connection() as conn:
         cursor = conn.cursor()
-        # 1. Added the 5 new medical columns to the table creation
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,13 +28,11 @@ def init_db():
         """)
         conn.commit()
 
-# 2. Updated the function signature to catch all the new medical data
 def store_user_and_plan(name, age, sex, weight, height, purpose, bloodPressure, pulse, hasDiabetes, hasThyroid, otherConditions, plan):
     with get_connection() as conn:
         cursor = conn.cursor()
         timestamp = datetime.utcnow().isoformat()
         
-        # 3. Updated the INSERT command to save all 11 fields to the database
         cursor.execute("""
             INSERT INTO user_profiles (
                 name, age, sex, weight, height, purpose, 
@@ -51,3 +48,37 @@ def store_user_and_plan(name, age, sex, weight, height, purpose, bloodPressure, 
             VALUES (?, ?, ?)
         """, (user_id, plan, timestamp))
         conn.commit()
+
+# --- NEW: Check if a plan was already made today ---
+def get_todays_plan(name):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        today_str = datetime.utcnow().strftime('%Y-%m-%d')
+        cursor.execute("""
+            SELECT h.generated_plan 
+            FROM health_plans h
+            JOIN user_profiles u ON h.user_id = u.id
+            WHERE u.name = ? AND h.created_at LIKE ?
+            ORDER BY h.created_at DESC LIMIT 1
+        """, (name, f"{today_str}%"))
+        result = cursor.fetchone()
+        return result[0] if result else None
+
+# --- NEW: Get the last 7 days to feed to the AI ---
+def get_weekly_history(name):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT h.created_at, h.generated_plan 
+            FROM health_plans h
+            JOIN user_profiles u ON h.user_id = u.id
+            WHERE u.name = ?
+            ORDER BY h.created_at DESC LIMIT 7
+        """, (name,))
+        rows = cursor.fetchall()
+        
+        history = ""
+        for row in rows:
+            # We just send a summary of the past plans so we don't overwhelm the AI
+            history += f"Date: {row[0][:10]} | Past Plan Details: {row[1][:300]}...\n"
+        return history

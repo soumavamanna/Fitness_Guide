@@ -3,9 +3,9 @@ from pydantic import BaseModel
 import uvicorn
 from datetime import datetime
 from typing import Optional
-from memory import init_db, store_user_and_plan
 from llm import generate_plan
 from prompt import build_fitness_prompt
+from memory import init_db, store_user_and_plan, get_todays_plan, get_weekly_history
 
 app = FastAPI(title="AI Fitness API")
 
@@ -47,20 +47,28 @@ def calculate_bmi(weight_kg: float, height_cm: float):
 @app.post("/generate-plan", response_model=PlanResponse)
 async def create_plan(user: UserProfile):
     try:
-        # Get the exact current date/time to force Gemini to make it for TODAY only
         current_time = datetime.now().strftime("%A, %B %d, %Y")
         
-        # 1. Pass ALL 11 fields + the time to the prompt builder
+        # --- NEW LOGIC: CHECK IF PLAN EXISTS FOR TODAY ---
+        existing_plan = get_todays_plan(user.name)
+        
+        if existing_plan:
+            # If they already generated one today, give them the saved one!
+            bmi_val, bmi_cat = calculate_bmi(user.weight, user.height)
+            saved_message = "*Note: This is your saved prescription for today. It will reset at midnight.*\n\n"
+            return PlanResponse(bmi=bmi_val, bmi_category=bmi_cat, plan=saved_message + existing_plan)
+        
+        # --- IF NO PLAN EXISTS, GET HISTORY AND GENERATE ---
+        weekly_history = get_weekly_history(user.name)
+        
         prompt = build_fitness_prompt(
             user.name, user.age, user.sex, user.weight, user.height, user.purpose,
             user.bloodPressure, user.pulse, user.hasDiabetes, user.hasThyroid, user.otherConditions,
-            current_time
+            current_time, weekly_history
         )
         
-        # 2. Ask Gemini for the plan
         plan = generate_plan(prompt)
         
-        # 3. Pass ALL 11 fields + the plan to the database
         store_user_and_plan(
             user.name, user.age, user.sex, user.weight, user.height, user.purpose,
             user.bloodPressure, user.pulse, user.hasDiabetes, user.hasThyroid, user.otherConditions,
@@ -68,11 +76,9 @@ async def create_plan(user: UserProfile):
         )
         
         bmi_val, bmi_cat = calculate_bmi(user.weight, user.height)
-        
         return PlanResponse(bmi=bmi_val, bmi_category=bmi_cat, plan=plan)
         
     except Exception as e:
-        # This will print the exact crash reason in your VS Code terminal!
         print(f"CRASH DETAILS: {repr(e)}") 
         raise HTTPException(status_code=500, detail=str(e))
 
