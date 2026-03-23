@@ -26,8 +26,8 @@ def build_fitness_prompt(name, age, sex, weight, height, purpose, bloodPressure,
 
     **Strict Instructions:**
     1. **Title:** Start your response by explicitly stating: "### Day {day_number} Plan for {current_time}".
-    2. **Diet:** Recommend ONLY food locally and easily available in India. Ensure meals incorporate local staples that fit their goals.
-    3. **Exercise Progression:** NO GYM EQUIPMENT ALLOWED. The workout must strictly consist of freehand exercises, yoga asanas, stretching, and breathing exercises. Review the 'Previous 7 Days History' and DO NOT repeat the exact same routines. Introduce new variations today to promote wholesome development.
-    4. **YouTube Tutorials (CRITICAL):** For EVERY single exercise, stretch, or yoga pose you recommend, you MUST provide a clickable YouTube link using Markdown. Format it exactly like this: `[Watch Tutorial](https://www.youtube.com/results?search_query=how+to+do+EXERCISE_NAME)`. Replace EXERCISE_NAME with the actual name of the pose, using `+` for spaces (e.g., `how+to+do+surya+namaskar`).
+    2. **Diet:** Recommend ONLY food locally and easily available in India. Ensure meals incorporate local staples that fit their goals. **DO NOT generate any YouTube links for food or recipes.**
+    3. **Exercise Progression:** NO GYM EQUIPMENT ALLOWED. The workout must strictly consist of freehand exercises, yoga asanas, stretching, and breathing exercises. Review the 'Previous 7 Days History' and DO NOT repeat the exact same routines.
+    4. **YouTube Tutorials (EXERCISE ONLY):** For EVERY single exercise, stretch, or yoga pose, you MUST provide a clickable YouTube search link using Markdown. Format it exactly like this: `[Watch Tutorial](https://www.youtube.com/results?search_query=EXERCISE_NAME)`. Replace EXERCISE_NAME with the actual name of the pose, using `+` for spaces (e.g., `how+to+do+surya+namaskar`). Do NOT put links in the diet section.
     5. ONLY provide the plan for today. Format cleanly using Markdown headers and bullet points.
     """
