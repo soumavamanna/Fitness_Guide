@@ -82,3 +82,16 @@ def get_weekly_history(name):
             # We just send a summary of the past plans so we don't overwhelm the AI
             history += f"Date: {row[0][:10]} | Past Plan Details: {row[1][:300]}...\n"
         return history
+    # --- NEW: Count how many days the user has been active ---
+def get_user_day_count(name):
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        # We count the unique dates (the first 10 characters of the timestamp: YYYY-MM-DD)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT substr(h.created_at, 1, 10))
+            FROM health_plans h
+            JOIN user_profiles u ON h.user_id = u.id
+            WHERE u.name = ?
+        """, (name,))
+        result = cursor.fetchone()
+        return result[0] if result else 0
